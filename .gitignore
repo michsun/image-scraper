@@ -1,0 +1,8 @@
+.DS_Store
+.vscode/*
+.pytest_cache/*
+_env_image_scraper/*
+images/*
+debug_files/*
+
+TODO.md
