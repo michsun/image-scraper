@@ -44,7 +44,7 @@ python image_scraper -gs "three word search"
 ```
 For pinterest, there is also a custom pinterest board scraper. 
 ```
-python image_scraper -ps <pinterest_board_url>
+python image_scraper -pb <pinterest_board_url>
 ```
 
 ## Disclaimer
