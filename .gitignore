@@ -4,5 +4,6 @@
 _env_image_scraper/*
 images/*
 debug_files/*
+image_scraper/__pycache__/*
 
 TODO.md

@@ -215,11 +215,11 @@ def main():
     tic = time.time()
     if args.pinboard_search:
         url = args.pinboard_search
-        download_pinterest_board_images(url, saveSource=True)
+        download_pinterest_board_images(url)
     if args.search:
         query = args.search
         if args.google_search:
-            download_google_images(query)
+            download_google_images(query, saveSource=True)
         if args.pinterest_search:
             download_pinterest_images(query)
     toc = time.time()
