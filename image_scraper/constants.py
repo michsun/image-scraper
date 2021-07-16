@@ -1,8 +1,4 @@
-#
 WEBDRIVER_PATH = "drivers/chromedriver"
-
-# User inputs
-WEBDRIVER_PATH = "/Users/michellesun/Dropbox/dev/image-scraper/drivers/chromedriver"
 
 SCROLL_LIMIT = 200000 # Max height of the page 
 UNDETECT_LIMIT = 10 # Max number of times an element can go undetected
@@ -15,7 +11,6 @@ GOOGLE_SPACE_ENCODING = '+'
 PINTEREST_SEARCH_URL = "https://nl.pinterest.com/search/pins/?q="
 PINTEREST_SEARCH_TERM = "typed&term_meta[]={query}%7Ctyped"
 PINTEREST_SPACE_ENCODING = "%20"
-
 
 # Configuration inputs
 NUMBER_OF_IMAGES = 100
