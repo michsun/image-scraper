@@ -1,0 +1,25 @@
+{
+    "image": {
+        "save_path": "images/"
+    },
+    "search": {
+        "Google": {
+            "iterate_sleep": 0.2,
+            "load_sleep": 1,
+            "scroll_limit": 200000,
+            "undetect_limit": 10,
+            "webdriverwait_sleep": 2
+        },
+        "Pinterest": {
+            "iterate_sleep": 0.2,
+            "load_sleep": 3,
+            "scroll_limit": 200000,
+            "undetect_limit": 10,
+            "webdriverwait_sleep": 2
+        }
+    },
+    "webdriver": {
+        "browser": "Chrome",
+        "path": "drivers/chromedriver"
+    }
+}
