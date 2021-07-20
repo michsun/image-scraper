@@ -1,5 +1,7 @@
 import json
 
+from typing import Dict
+
 class Config:
     
     def __init__(self, dictionary):
@@ -38,21 +40,20 @@ def reset_defaults():
         json.dump(json_config, file, sort_keys=True, ensure_ascii=False, indent=4)
 
 
-def test_open():
+def update_json(new : Dict):
     with open("scripts/config.json", 'r', encoding='utf-8') as file:
-        config = json.load(file)
-        config = Config(config)
-    attrs = vars(config)
-    print(config.image)
-    
-    image_config = Config(config.image)
-    webdriver_config = Config(config.webdriver)
-    search_config = Config(config.search_config)
-    
-    print(image_config.save_path)
-    print(webdriver_config.browser, webdriver_config.path)
-    print(search_config.Google, search_config.Pinterest)
+        prev = json.load(file)
+   
+def update_dictionary(prev: Dict, new: Dict):
+    prev_updated = prev
+    for k,v in new.items():
+        if type(prev[k]) == dict and type(v) == dict:
+            print("Ran!")
+            prev_updated[k] = update_dictionary(prev=prev[k], new=v)
+        else:
+            prev_updated[k] = v
+    return prev_updated
 
 if __name__ == "__main__":
-    reset_defaults()
-    # test_open()
+    # update_value()
+    pass

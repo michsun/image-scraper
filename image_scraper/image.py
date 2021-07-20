@@ -11,8 +11,8 @@ from typing import Dict, List
 from urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
-from config import Config
-from test_utils import timer
+from .config import Config
+from .utils import timer
 
 class ImagesDownloader(Config):
     
