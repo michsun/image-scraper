@@ -1,5 +1,5 @@
 import unittest
-import scripts.config as config
+from image_scraper.config import *
 
 class TestConfig(unittest.TestCase):
     
@@ -8,7 +8,7 @@ class TestConfig(unittest.TestCase):
         new_values = {'a':10, 'b': {'two': 200}, 'c': {'level1': {'level2': True}}}
         expected = {'a': 10, 'a2': 2, 'b': {'one': 1, 'two': 200, 'three': 3 }, 'c': {'level1': {'level2': True }}}
         
-        result = config.update_dictionary(prev=dictionary, new=new_values)
+        result = update_dictionary(prev=dictionary, new=new_values)
         self.assertEqual(result, expected)
         
         

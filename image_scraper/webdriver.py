@@ -8,7 +8,7 @@ from tqdm import tqdm
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
-from .config import Config
+from config import Config
 
 TEST_LIMIT = 50
 

@@ -8,11 +8,10 @@ import validators
 
 from typing import Dict
 
-from .config import Config, reset_defaults
-from .image import ImagesDownloader
-from .image_search import GoogleSearch, PinterestSearch
-
-from test_utils import timer
+from config import Config, reset_defaults
+from image import ImagesDownloader
+from image_search import GoogleSearch, PinterestSearch
+from utils import timer
 
 class ImageScraper:
     
@@ -24,7 +23,7 @@ class ImageScraper:
         
     def _load_config(self) -> Config:
         """Loads config.json and creats appropriate config files."""
-        with open("scripts/config.json", 'r', encoding='utf-8') as file:
+        with open("image_scraper/config.json", 'r', encoding='utf-8') as file:
             return Config(json.load(file))
             
     def _create_image_config(self) -> Config:
@@ -172,7 +171,7 @@ def parse(config):
     config_parser.add_argument('-cd','--chromedriver-path', help='enter the chromedriver path to quickly configure the package', type=file_path, required=False)
     config_parser.add_argument('-r', '--reset-defaults', help='resets the configuration settings (warning: the webdriver path will need to be reset', action='store_true', required=False)
     # config_parser.add_argument('-s', '--setup', help='runs a quick config setup in the command line', action='store_true', required=False)
-    config_parser.add_argument(func=configure)
+    config_parser.set_defaults(func=configure)
     
     args = parser.parse_args()
     args.func(args, config)

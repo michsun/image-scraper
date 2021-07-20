@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 
 from typing import Dict
 
-from .webdriver import WebDriver
+from webdriver import WebDriver
 
 class ImageSearch:
     """Base class for image scrapers."""
