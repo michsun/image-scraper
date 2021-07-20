@@ -7,7 +7,28 @@ class Config:
     def __init__(self, dictionary):
         for k, v in dictionary.items():
             setattr(self, k, v)
-        
+
+def update_dictionary(prev: Dict, new: Dict):
+    prev_updated = prev
+    for k,v in new.items():
+        if type(prev[k]) == dict and type(v) == dict:
+            print("Ran!")
+            prev_updated[k] = update_dictionary(prev=prev[k], new=v)
+        else:
+            prev_updated[k] = v
+    return prev_updated
+
+def save_config_json(config_dict : Dict):
+    json_config = json.loads(json.dumps(config_dict))
+    with open("image_scraper/config.json",'w', encoding='utf-8') as file:
+        json.dump(json_config, file, sort_keys=True, ensure_ascii=False, indent=4)
+
+def update_config_json(new : Dict):
+    with open("image_scraper/config.json", 'r', encoding='utf-8') as file:
+        prev = json.load(file)
+    updated = update_dictionary(prev, new)
+    save_config_json(updated)
+
 def reset_defaults():
     default_config = {
         "image": {
@@ -36,23 +57,8 @@ def reset_defaults():
         }
     }
     json_config = json.loads(json.dumps(default_config))
-    with open("scripts/config.json", 'w', encoding='utf-8') as file:
+    with open("image_scraper/config.json", 'w', encoding='utf-8') as file:
         json.dump(json_config, file, sort_keys=True, ensure_ascii=False, indent=4)
-
-
-def update_json(new : Dict):
-    with open("scripts/config.json", 'r', encoding='utf-8') as file:
-        prev = json.load(file)
-   
-def update_dictionary(prev: Dict, new: Dict):
-    prev_updated = prev
-    for k,v in new.items():
-        if type(prev[k]) == dict and type(v) == dict:
-            print("Ran!")
-            prev_updated[k] = update_dictionary(prev=prev[k], new=v)
-        else:
-            prev_updated[k] = v
-    return prev_updated
 
 if __name__ == "__main__":
     # update_value()
