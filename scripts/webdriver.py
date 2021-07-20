@@ -10,15 +10,6 @@ from selenium.webdriver.chrome.options import Options
 
 from config import Config
 
-WEBDRIVER_PATH = "drivers/chromedriver"
-SCROLL_LIMIT = 200000 # Max height of the page when scrolling to the bottom
-UNDETECT_LIMIT = 10 # Max number of times an element can go undetected
-
-# Sleep times
-LOAD_SLEEP = 3
-ITERATE_SLEEP = 0.2
-WEBDRIVERWAIT_SLEEP = 2
-
 TEST_LIMIT = 50
 
 class WaitTest:
@@ -152,12 +143,11 @@ class WebDriver(Config):
         
         click_elements = self.driver.find_elements(click_by, click_condition)
         save_elements = list()
-        
+        exceptions = list()
         print("> Clicking on links...")
         
         # if len(click_elements) > TEST_LIMIT:
         #     click_elements = click_elements[:TEST_LIMIT]
-        
         for element in tqdm(click_elements):
             try:
                 if not element.is_displayed() or not element.is_enabled():
@@ -173,18 +163,23 @@ class WebDriver(Config):
                         )
                         save_elements += [found_element.get_attribute("outerHTML").replace(found_element.get_attribute("innerHTML"),'')]
                     except TimeoutException:
-                        print("Did not find element")
+                        err = sys.exc_info()[0]
+                        err_str = "{} : Did not find element".format(err.__name__)
+                        exceptions.append(err_str)
             except ElementNotInteractableException as e:
-                print("Exception: Element not interactable. Consider extending sleep time.")
-                print(element.get_attribute("outerHTML").replace(element.get_attribute("innerHTML"),''))
-                print(e)
+                err = sys.exc_info()[0]
+                err_str = err.__name__
+                exceptions.append(err_str)
             except ElementClickInterceptedException as e:
-                print("Exception: Element Click Intercepted")
-                print(element.get_attribute("outerHTML").replace(element.get_attribute("innerHTML"),''))
-                print(e)
+                err = sys.exc_info()[0]
+                err_str = err.__name__
+                exceptions.append(err_str)
             except Exception as e:
-                print(e)
+                err = sys.exc_info()[0]
+                err_str = err.__name__
+                exceptions.append(err_str)
                 
         if (save_xpath and save_attr and save_condition_regex):
-            return save_elements
+            return save_elements, exceptions
+        # return exceptions
         # print(element.get_attribute("outerHTML").replace(element.get_attribute("innerHTML"),''))

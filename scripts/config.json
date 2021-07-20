@@ -5,7 +5,7 @@
     "search": {
         "Google": {
             "iterate_sleep": 0.2,
-            "load_sleep": 1,
+            "load_sleep": 2,
             "scroll_limit": 200000,
             "undetect_limit": 10,
             "webdriverwait_sleep": 2

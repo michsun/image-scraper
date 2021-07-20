@@ -1,8 +1,10 @@
+import argparse
 import asyncio
 import json
 import os
 from re import search
 import sys
+import validators
 
 from typing import Dict
 
@@ -74,25 +76,32 @@ class ImageScraper:
         driver_config.update(self.config.search[search_engine])
         return driver_config
     
+def download_image_urls(config : ImageScraper, image_urls, subfolder=None):
+    downloader = ImagesDownloader(config=config.image_config, subfolder=subfolder)
+    downloader.download_queue(image_urls=image_urls)
 
-def download_images(args, config : ImageScraper) -> None:
+def download(args, config : ImageScraper) -> None:
     if args.url:
         ImagesDownloader(config=config.image_config).download_image(image_url=args.url)
     if args.pinterest_board:
         driver_config = config.get_driver_config("Pinterest")
         pinterest = PinterestSearch(driver_config=driver_config, url=args.pinterest_board)
         
-        task = pinterest.get_board_image_urls()
         loop = asyncio.get_event_loop()
-        image_urls = loop.run_until_complete(asyncio.gather(task))
+        image_urls = loop.run_until_complete(asyncio.gather(pinterest.get_board_image_urls()))
+        
         image_urls = [ url for sublist in image_urls for url in sublist ]
-        for url in image_urls: print(url)
-        # image_urls += asyncio.run(task)
-        board_name = pinterest.get_details()["query"]
-
-        downloader = ImagesDownloader(config=config.image_config, subfolder=board_name)
-        downloader.download_queue(image_urls=image_urls)
-
+        subfolder_name = args.name if args.name is not None else pinterest.get_details()["query"]
+        download_image_urls(config=config, image_urls=image_urls, subfolder=subfolder_name)
+    if args.from_file:
+        image_urls = []
+        subfolder_name = args.name if args.name is not None else os.path.splitext(os.path.basename(args.from_file))[0]
+        with open(args.from_file) as file:
+            for line in file:
+                if validators.url(line.strip()):
+                    image_urls.append(line.strip())
+        download_image_urls(config=config, image_urls=image_urls, subfolder=subfolder_name) 
+        
 def search_and_scrape(args, config) -> None:
     search_engines = []
     if args.search:
@@ -111,15 +120,25 @@ def search_and_scrape(args, config) -> None:
         image_urls = loop.run_until_complete(asyncio.gather(*(search.get_search_image_urls() for search in search_engines)))
         image_urls = [ url for sublist in image_urls for url in sublist ]
         
-        downloader = ImagesDownloader(config=config.image_config, subfolder=args.search)
-        downloader.download_queue(image_urls=image_urls)
-    
+        if args.export_urls:
+            file_name = "{}_image_urls.txt".format(args.search.lower().replace(' ','_'))
+            with open(file_name,'w') as file:
+                for url in image_urls:
+                        file.write(f"{url}\n")
+                print(f"Image urls save in file '{file_name}'.")
+
+        # download_image_urls(config=config, image_urls=image_urls, subfolder=args.search)
+
+def file_path(string):
+    if os.path.isfile(string):
+        return string
+    else:
+        raise argparse.ArgumentTypeError(f"{string} is not a valid file.")
+
         
 def parse(config):
-    """Process command line arguments and execute the given command."""
-    from argparse import ArgumentParser
-    
-    parser = ArgumentParser(description="Image Scraper command line utility.")
+    """Process command line arguments and execute the given command."""    
+    parser = argparse.ArgumentParser(description="Image Scraper command line utility.")
     subparsers = parser.add_subparsers(title="Commands")
     
     search_parser = subparsers.add_parser("search", aliases=["srch"],
@@ -127,16 +146,19 @@ def parse(config):
                                           help="search and download images given a query")
     search_parser.add_argument('-g', '--google', help='search query on google', action='store_true',required=False)
     search_parser.add_argument('-p', '--pinterest', help='search query on pinterest', action='store_true', required=False)
+    search_parser.add_argument('-e', '--export-urls', help='exports retrieved urls and saves as image_urls.txt', action='store_true', required=False)
     search_parser.add_argument('-s', '--search', help='query to search for on indicated search engine(s)', type=str, required=True)
     search_parser.set_defaults(func=search_and_scrape)
 
     download_parser = subparsers.add_parser("download", aliases=["dl"],
                                            description="Downloads images given a url",
                                            help="downloads images given url(s)")
+    download_parser.add_argument('-f', '--from-file', help='download images from file with urls', type=file_path, required=False)
+    download_parser.add_argument('-n', '--name', help='name of the subfolder to store downloaded images', type=str, required=False)
     download_parser.add_argument('-pb', '--pinterest-board', help='scrape images from a pinterest board url', type=str, required=False)
     download_parser.add_argument('-url', '--url', help='image url to download', type=str,required=False)
     download_parser.add_argument('-v', '--verbose', help='verbose', action='store_true', required=False)
-    download_parser.set_defaults(func=download_images)
+    download_parser.set_defaults(func=download)
     
     args = parser.parse_args()
     args.func(args, config)

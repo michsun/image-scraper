@@ -29,10 +29,10 @@ class ImageSearch:
         """Returns the full search URL for the search engine."""
         return base_url + urllib.parse.urlencode({'q': self._query}, quote_via=quote_via)
         
-    def _create_webdriver(self) -> None:
+    def initialise_webdriver(self, url) -> None:
         """Instantiates a WebDriver object."""
         self._driver = WebDriver(self._driver_config)
-        self._driver.get(self._url)
+        self._driver.get(url)
         time.sleep(0.5)
 
     def get_details(self):
@@ -64,7 +64,7 @@ class GoogleSearch(ImageSearch):
     
     async def get_search_image_urls(self):
         """Scrapes Google Search and returns a list of urls for the images."""
-        super()._create_webdriver()
+        super().initialise_webdriver(self._url)
         
         await self._driver.scroll_to_bottom()
         # Clicks on "Show more results" to grab more images
@@ -74,17 +74,30 @@ class GoogleSearch(ImageSearch):
         
         source_html = self._driver.get_page_source()
         n_detected = self.count_images(source_html)
-        print(f"> Number of images found: {n_detected}")
+        print(f"> Number of images detected: {n_detected}")
         # Clicks on images and get full resolution images
         img_xpath = "//*[@id=\"Sva75c\"]/div/div/div[3]/div[2]/c-wiz/div/div[1]/div[1]/div[2]/div[1]/a/img"
         click_class = "BUooTd"
-        image_elements  = await self._driver.click_and_get_elements(click_by="class name",
+        image_elements, exceptions = await self._driver.click_and_get_elements(click_by="class name",
                                                               click_condition=click_class,
                                                               save_xpath=img_xpath,
                                                               save_attr="src",
                                                               save_condition_regex="(^https?://)(?!encrypted-tbn0.gstatic.com)")
 
         image_urls = [ re.search('src="(.*?)"', element).group(1) for element in image_elements ] # Implement re.search() check before .group(1)
+        
+        unique_err = list(set(exceptions))
+        err_summary = { err_string : exceptions.count(err_string) for err_string in unique_err }
+        min_width = 8
+        width = max(map(len,unique_err))
+        width = max(width, min_width)
+        
+        print(f"\n {'EXCEPTION TYPE':<{width}} | {'TOTAL':<{width}}")
+        print(" {}+{}".format('='*(width+1),'='*(width+1)))
+        for k,v in err_summary.items():
+            print(f" {k:>{width}} | {v:<{width}}")
+        
+        print(f"\n> Number of image urls retrieved: {len(image_urls)}")
         
         self._debug_success = len(image_urls)
         self._debug_fail = n_detected - self._debug_success
@@ -107,7 +120,7 @@ class PinterestSearch(ImageSearch):
         return super().generate_url(base_url, self._quote_via)
     
     async def initialise_source_html(self, scroll=True, expectation=None) -> str:
-        super()._create_webdriver()
+        super().initialise_webdriver(self._url)
 
         if expectation is not None:
             await self._driver.scroll_to_element(expectation)
@@ -138,7 +151,7 @@ class PinterestSearch(ImageSearch):
             bs = bs.find('div', {'class': "Collection"})
         image_elements = bs.find_all('img', {'src': re.compile("https://i.pinimg.com/236x/*")})
         urls = [ e.attrs['src'] for e in image_elements ]
-        print(f"> Number of images found: {len(urls)}")
+        print(f"> Number of image urls retrieved: {len(urls)}")
         image_urls = [ os.path.splitext(url)[0].replace('/236x/','/originals/').split('-')[0] + os.path.splitext(url)[1] for url in urls ]
         self._debug_success = len(image_urls)
         

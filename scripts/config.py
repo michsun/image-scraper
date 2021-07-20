@@ -20,7 +20,7 @@ def reset_defaults():
             "Google": {
                 "scroll_limit": 200000,
                 "undetect_limit": 10,
-                "load_sleep": 1,
+                "load_sleep": 2,
                 "iterate_sleep": 0.2,
                 "webdriverwait_sleep": 2
             },

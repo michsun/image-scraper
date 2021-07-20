@@ -2,10 +2,14 @@ import concurrent.futures
 import os
 import re
 import requests
-import tqdm
+import sys
 
+from http.client import responses
 from pathlib import Path
+from tqdm import tqdm
 from typing import Dict, List
+from urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 from config import Config
 from test_utils import timer
@@ -15,12 +19,11 @@ class ImagesDownloader(Config):
     # Image config params
     # self.save_path
     
-    def __init__(self, config : Dict, image_urls : List[str] = None, image_names : List[str] = None, subfolder : str = None):
+    def __init__(self, config : Dict, image_urls : List[str] = None, image_name : str = None, subfolder : str = None):
         super().__init__(config)
-        if subfolder is not None:
-            self.save_path = os.path.join(self.save_path, subfolder.replace(' ','_'))
+        self.image_names = image_name
         self.queue = image_urls
-        self.image_names = image_names
+        self.save_path = os.path.join(self.save_path, subfolder.replace(' ','_')) if subfolder is not None else None
     
     # TODO: Extensive testing
     def get_full_file_path(self, image_url : str, r : requests.models.Response) -> str:
@@ -44,10 +47,26 @@ class ImagesDownloader(Config):
             full_file_path = os.path.join(self.save_path, file_name)
         return full_file_path
     
-    def download_image(self, image_url, file_name=None) -> None:
+    def download_image(self, image_url, timeout=10, file_name=None) -> int:
         """Requests and downloads the image."""
         try:
-            r = requests.get(image_url, timeout=5)
+            r = requests.get(image_url, timeout=timeout, verify=False)
+        except requests.exceptions.ReadTimeout:
+            if timeout < 20:
+                return self.download_image(image_url=image_url, timeout=20, file_name=file_name)
+            else:
+                return 418
+        except Exception as e:
+            print(f"Fatal exception at {image_url}.")
+            err = sys.exc_info()[0]
+            err_str = err.__name__
+            print(e)
+            print(err)
+            print(err_str)
+            sys.exit(1)
+        
+        try:
+            r.raise_for_status()
             image_bytes = r.content
             Path(self.save_path).mkdir(parents=True, exist_ok=True)
             full_file_path = self.get_full_file_path(image_url, r)
@@ -56,15 +75,22 @@ class ImagesDownloader(Config):
                     image_file.write(image_bytes)
             except Exception as e:
                 print(e)
-        except requests.ConnectionError as e:
-            print(f"> Error: Connection Error: at {image_url}")
-            print(str(e))
-        except requests.Timeout as e:
-            print(f"> Error: Timeout: at {image_url}")
-            print(str(e))
-        except requests.RequestException as e:
-            print(f"> Error: General Error: at {image_url}")
-            print(str(e))
+        # TODO: Exception log during debug
+        except requests.exceptions.HTTPError as e:
+            # print(e)
+            pass
+        except requests.exceptions.ConnectionError as e:
+            # print(e)
+            pass
+        except requests.exceptions.Timeout as e:
+            # print(e)
+            pass
+        except requests.exceptions.RequestException as e:
+            print(e)
+            pass
+        finally:
+            return r.status_code
+
 
     def download_queue(self, image_urls) -> None:
         """Creates threads to execute the image download."""
@@ -72,10 +98,21 @@ class ImagesDownloader(Config):
         if image_urls is None or len(image_urls) == 0:
             raise Exception("Error: [ImageDownloader] image_urls queue is empty. ")
         with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-            futures = [executor.submit(self.download_image, url) for url in image_urls ]
-        for future in concurrent.futures.as_completed(futures):
-            print(future.result())
+            status_codes = list(tqdm(executor.map(self.download_image, image_urls), total=len(image_urls)))
+        # TODO: If logging then create a csv
         print("> Executor complete")
+        unique = list(set(status_codes))
+        results = { responses[code] : status_codes.count(code) for code in unique }
+        
+        # TODO: Tabulate function in utils
+        min_width = 12
+        width = max(max(map(len, unique)),12)
+        print(f"\n {'STATUS':>{width}} | {'TOTAL IMAGES':<{width}}")
+        print(" {}+{}".format('='*(width+1),'='*(width+1)))
+        for k,v in results.items():
+            print(f" {k:>{width}} | {v:<{width}}")
+        
+        print(f"\n> Successfully downloaded {results['OK']} images.")
 
         
 def run():
