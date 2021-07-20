@@ -48,10 +48,8 @@ class GoogleSearch(ImageSearch):
     def __init__(self, driver_config : Dict, query, url=None, verbose=False):
         super().__init__(query, driver_config, verbose)
         self._quote_via = urllib.parse.quote_plus
-        if url is None:
-            self._url : str = self.generate_url()
-        else:
-            self._url : str = None
+        self._name : str = "Google"
+        self._url : str = self.generate_url() if url is None else url
         
     def generate_url(self) -> str:
         """Returns the full search url for the search engine."""
@@ -68,7 +66,7 @@ class GoogleSearch(ImageSearch):
         """Scrapes Google Search and returns a list of urls for the images."""
         super()._create_webdriver()
         
-        self._driver.scroll_to_bottom()
+        await self._driver.scroll_to_bottom()
         # Clicks on "Show more results" to grab more images
         xpath = "//*[@id=\"islmp\"]/div/div/div/div[1]/div[2]/div[2]/input"
         await self._driver.click_and_get_elements(click_by="xpath", click_condition=xpath)
@@ -98,12 +96,10 @@ class PinterestSearch(ImageSearch):
     
     def __init__(self, driver_config : Dict, query=None, url=None, verbose=False):
         super().__init__(query=query, driver_config=driver_config, verbose=verbose)
+        self._name : str= "Pinterest"
         self._quote_via = urllib.parse.quote
-        if url is None:
-            self._url : str = self.generate_url()
-        else:
-            self._url : str = url
-        self.source_html = None
+        self._source_html = None
+        self._url : str = self.generate_url() if url is None else url
     
     def generate_url(self) -> str:
         """Returns the full search url for the search engine."""
@@ -122,10 +118,10 @@ class PinterestSearch(ImageSearch):
     async def get_board_image_urls(self, board_name=None, save_source=False):
         print("> Fetching pinterest board images...")
         expectation = ("xpath", "//section[@data-test-id='secondaryBoardGrid']")
-        self.source_html = await self.initialise_source_html(expectation=expectation)
+        self._source_html = await self.initialise_source_html(expectation=expectation)
         
         if board_name == None:
-            bs = BeautifulSoup(self.source_html, "lxml")
+            bs = BeautifulSoup(self._source_html, "lxml")
             board_name = bs.find('h1').text
             board_name = board_name.lower().replace(' ','_')
         self._query = board_name
@@ -134,10 +130,10 @@ class PinterestSearch(ImageSearch):
     
     async def get_search_image_urls(self, board=False):
         """Scrapes Pinterest Search and returns a list of urls for the images."""
-        if self.source_html is None:
-            self.source_html = await self.initialise_source_html()
+        if self._source_html is None:
+            self._source_html = await self.initialise_source_html()
         
-        bs = BeautifulSoup(self.source_html, "lxml")
+        bs = BeautifulSoup(self._source_html, "lxml")
         if board:
             bs = bs.find('div', {'class': "Collection"})
         image_elements = bs.find_all('img', {'src': re.compile("https://i.pinimg.com/236x/*")})

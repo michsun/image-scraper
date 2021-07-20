@@ -46,7 +46,6 @@ class ImagesDownloader(Config):
     
     def download_image(self, image_url, file_name=None) -> None:
         """Requests and downloads the image."""
-        # Requests and saves image
         try:
             r = requests.get(image_url, timeout=5)
             image_bytes = r.content
@@ -85,7 +84,6 @@ def run():
     
     downloader = ImagesDownloader(save_path=save_path)
     downloader.download_image(image_url=url, file_name="test1.jpg")
-
 
 if __name__ == "__main__":
     run()
