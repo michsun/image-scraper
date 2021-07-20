@@ -1,12 +1,12 @@
+import asyncio
+import re
 import sys
 import time
-import re
 
 from typing import Dict
 from tqdm import tqdm
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-
 
 from config import Config
 
@@ -90,13 +90,13 @@ class WebDriver(Config):
         return self.driver.page_source
     
     
-    def scroll_to_top(self) -> None:
+    async def scroll_to_top(self) -> None:
         """Scrolls to the top of the page."""
         self.driver.execute_script("window.scroll(0, 0);")
-        time.sleep(self.load_sleep)
+        await asyncio.sleep(self.load_sleep)
     
     
-    def scroll_to_bottom(self) -> None:
+    async def scroll_to_bottom(self) -> None:
         """Scrolls to the bottom of the page."""
         new_height = self.driver.execute_script("return document.body.scrollHeight")
         prev_height = 0
@@ -105,12 +105,12 @@ class WebDriver(Config):
         while((new_height != prev_height) and (new_height < self.scroll_limit)):
             prev_height = new_height
             self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(self.load_sleep) # TODO: Check optimal sleep value
+            await asyncio.sleep(self.load_sleep) # TODO: Check optimal sleep value
             new_height = self.driver.execute_script("return document.body.scrollHeight")
             print("  Page height: ",new_height, sep='',end='\r',flush=True)
         print("\n> Scroll complete")
         
-    def scroll_to_element(self, expectation) -> None:
+    async def scroll_to_element(self, expectation) -> None:
         """Scrolls down the page until an expected element has been detected."""
         from selenium.webdriver.support import expected_conditions as EC
         from selenium.common.exceptions import NoSuchElementException
@@ -120,7 +120,7 @@ class WebDriver(Config):
         count = 0
         while not detected:
             self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(self.iterate_sleep)
+            await asyncio.sleep(self.iterate_sleep)
             try: 
                 element = self.driver.find_element(expectation[0], expectation[1])
                 detected = True
@@ -140,7 +140,7 @@ class WebDriver(Config):
         print(element.get_attribute("outerHTML").replace(element.get_attribute("innerHTML"),''))
         print("> Scroll complete")    
     
-    def click_and_get_elements(self, click_by, click_condition, save_xpath=None, save_attr=None, save_condition_regex=None) -> None:
+    async def click_and_get_elements(self, click_by, click_condition, save_xpath=None, save_attr=None, save_condition_regex=None) -> None:
         """Clicks on an identified element and gets elements as string if condition is given."""
         
         BY = ["id", "xpath", "link text", "partial link text", "name", "tag name", "class name", "css selector"]
@@ -163,9 +163,9 @@ class WebDriver(Config):
                 if not element.is_displayed() or not element.is_enabled():
                     self.driver.execute_script("arguments[0].scrollIntoView();", element)
                     print("> Scroll executed")
-                    time.sleep(self.load_sleep)
+                    await asyncio.sleep(self.load_sleep)
                 element.click()
-                time.sleep(self.iterate_sleep)
+                await asyncio.sleep(self.iterate_sleep)
                 if (save_xpath and save_attr and save_condition_regex):
                     try:
                         found_element = WebDriverWait(self.driver, self.webdriverwait_sleep).until(

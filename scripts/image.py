@@ -76,7 +76,7 @@ class ImagesDownloader(Config):
             futures = [executor.submit(self.download_image, url) for url in image_urls ]
         for future in concurrent.futures.as_completed(futures):
             print(future.result())
-        print("> Executor complete?")
+        print("> Executor complete")
 
         
 def run():

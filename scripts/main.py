@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 from re import search
@@ -80,25 +81,39 @@ def download_images(args, config : ImageScraper) -> None:
     if args.pinterest_board:
         driver_config = config.get_driver_config("Pinterest")
         pinterest = PinterestSearch(driver_config=driver_config, url=args.pinterest_board)
-        image_urls = []
-        image_urls += pinterest.get_board_image_urls()
-        board_name = pinterest.get_details()["query"]
         
+        task = pinterest.get_board_image_urls()
+        loop = asyncio.get_event_loop()
+        image_urls = loop.run_until_complete(asyncio.gather(task))
+        image_urls = [ url for sublist in image_urls for url in sublist ]
+        for url in image_urls: print(url)
+        # image_urls += asyncio.run(task)
+        board_name = pinterest.get_details()["query"]
+
         downloader = ImagesDownloader(config=config.image_config, subfolder=board_name)
         downloader.download_queue(image_urls=image_urls)
 
 def search_and_scrape(args, config) -> None:
-    image_urls = []
     search_engines = []
-    
     if args.search:
         if args.google:
-            search_engines.append(GoogleSearch(args.search))
+            driver_config = config.get_driver_config("Google")
+            search_engines.append(GoogleSearch(query=args.search, driver_config=driver_config))
         if args.pinterest:
-            search_engines.append(PinterestSearch(args.search))
+            driver_config = config.get_driver_config("Pinterest")
+            search_engines.append(PinterestSearch(query=args.search, driver_config=driver_config))
         if len(search_engines) == 0:
             # Default search engine
-            search_engines.append(GoogleSearch(args.search))
+            driver_config = config.get_driver_config("Google")
+            search_engines.append(GoogleSearch(query=args.search, driver_config=driver_config))
+        
+        loop = asyncio.get_event_loop()
+        image_urls = loop.run_until_complete(asyncio.gather(*(search.get_search_image_urls() for search in search_engines)))
+        image_urls = [ url for sublist in image_urls for url in sublist ]
+        
+        downloader = ImagesDownloader(config=config.image_config, subfolder=args.search)
+        downloader.download_queue(image_urls=image_urls)
+    
         
 def parse(config):
     """Process command line arguments and execute the given command."""
@@ -110,8 +125,8 @@ def parse(config):
     search_parser = subparsers.add_parser("search", aliases=["srch"],
                                           description="Searches for images and downloads them.",
                                           help="search and download images given a query")
-    search_parser.add_argument('-g', '--google', help='search query on google', action='store_true',required='--search')
-    search_parser.add_argument('-p', '--pinterest', help='search query on pinterest', action='store_true', required='--search')
+    search_parser.add_argument('-g', '--google', help='search query on google', action='store_true',required=False)
+    search_parser.add_argument('-p', '--pinterest', help='search query on pinterest', action='store_true', required=False)
     search_parser.add_argument('-s', '--search', help='query to search for on indicated search engine(s)', type=str, required=True)
     search_parser.set_defaults(func=search_and_scrape)
 
