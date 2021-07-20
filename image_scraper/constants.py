@@ -8,7 +8,7 @@ SAVE_LOCATION = ""
 GOOGLE_SEARCH_URL = "https://www.google.com/search?tbm=isch&q="
 GOOGLE_SPACE_ENCODING = '+'
 
-PINTEREST_SEARCH_URL = "https://nl.pinterest.com/search/pins/?q="
+PINTEREST_SEARCH_URL = "https://www.pinterest.com/search/pins/?q="
 PINTEREST_SEARCH_TERM = "typed&term_meta[]={query}%7Ctyped"
 PINTEREST_SPACE_ENCODING = "%20"
 

@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 from urllib.request import urlopen
 from urllib.error import HTTPError, URLError
@@ -48,8 +49,6 @@ def save_image_from_url(url, savePath, fileName=None):
     except URLError:
         return 0,1,0
                     
-
-
 def save_image_urls(urls, savePath):
     """Saves a list of images and prints the numbers of successes, failures, and repeats."""
 
