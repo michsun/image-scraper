@@ -13,7 +13,6 @@ env/*
 # Folders
 images/*
 debug_files/*
-drivers/*
 image_scraper/__pycache__/*
 
 # Files
