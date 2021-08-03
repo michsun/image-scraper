@@ -19,3 +19,4 @@ image_scraper/__pycache__/*
 *image_urls.txt
 *.html
 TODO.md
+image_scraper/test.py
