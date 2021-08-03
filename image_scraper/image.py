@@ -105,8 +105,8 @@ class ImagesDownloader(Config):
         results = { responses[code] : status_codes.count(code) for code in unique }
         
         # TODO: Tabulate function in utils
-        min_width = 12
-        width = max(max(map(len, responses[unique])),12)
+        min_width = 8
+        width = max(max(map(len, [responses[code] for code in unique])), min_width)
         print(f"\n {'STATUS':>{width}} | {'TOTAL IMAGES':<{width}}")
         print(" {}+{}".format('='*(width+1),'='*(width+1)))
         for k,v in results.items():

@@ -1,8 +1,3 @@
-"""
-Process:
-1. User inputs search query and selects the appropriate search engine
-2. URL for the appropriate search engine is generated
-"""
 import asyncio
 import os
 import re
