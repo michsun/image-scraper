@@ -11,8 +11,10 @@
 env/*
 
 # Folders
+_old_image_scraper/*
 images/*
 debug_files/*
+drivers/*
 image_scraper/__pycache__/*
 
 # Files
