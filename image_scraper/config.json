@@ -1,5 +1,6 @@
 {
     "image": {
+        "create_subfolder": true,
         "save_path": "images/"
     },
     "search": {

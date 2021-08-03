@@ -14,62 +14,35 @@ from image_search import GoogleSearch, PinterestSearch
 from utils import timer
 from webdriver import WebDriver
 
-class ImageScraper:
+class ScraperConfig:
     
     def __init__(self):
         self.config : Config = self._load_config()
-        self.image_config : Dict = self.config.image
-        self.search_config : Dict[str, Config] = self._create_search_config()
-        self.webdriver_config : Config = self._create_webdriver_config()
         
     def _load_config(self) -> Config:
         """Loads config.json and creats appropriate config files."""
         with open("image_scraper/config.json", 'r', encoding='utf-8') as file:
-            return Config(json.load(file))
+            config_obj = Config(json.load(file))
+            if self.config_isvalid(config_obj):
+                return config_obj
+            else:
+                raise Exception("Configuration is invalid. Please check check config.json or run `image_scraper config -r` to reset defaults.")
+    
+    def config_isvalid(self, config : Config) -> bool:
+        valid = self._config_isvalid(config, ["image", "search", "webdriver"])
+        if valid:
+            image_isvalid = self._config_isvalid(Config(config.image), ["save_path", "create_subfolder"])
+            driver_isvalid = self._config_isvalid(Config(config.webdriver), ["browser", "path"])
+            search_isvalid = []
+            if type(config.search)==dict:
+                search_isvalid = [ self._config_isvalid(Config(sub_config), ["scroll_limit", "undetect_limit", "load_sleep", "iterate_sleep", "webdriverwait_sleep"]) for _, sub_config in config.search.items() ]
+            if image_isvalid and driver_isvalid and sum(search_isvalid)==len(search_isvalid):
+                return True
+        return False
             
-    def _create_image_config(self) -> Config:
-        """Creates a Config object for the ImageDownloader class."""
-        try:
-            image_config = Config(self.config.image)
-            # TODO: Perform valid checks on image configurations.
-            return image_config
-        except AttributeError as e:
-            print(e)
-            sys.exit(1)
-        except Exception as e:
-            print(e)
-            sys.exit(1)
-            
-    def _create_search_config(self) -> Dict[str, Config]:
-        """Creates a Config object for the ImageSearch class."""
-        try: 
-            search_config = self.config.search
-            search_config = { k: Config(v) for k,v in search_config.items() }
-            return search_config
-        except AttributeError as e:
-            print(e)
-            sys.exit(1)
-        except Exception as e:
-            print(e)
-            sys.exit(1)
-
-    def _create_webdriver_config(self) -> Config:
-        """Creates a webdriver Config object."""
-        try:
-            webdriver_config = Config(self.config.webdriver)
-            webdriver_path = webdriver_config.path
-            # TODO: Add additional check for the webdriver.
-            if webdriver_path == "":
-                raise Exception("Load Error: The path for the webdriver has not been set. \n\nPlease set your webdriver path in config.py or using 'python image_search config -cd <path_to_webdriver>'")
-            if not os.path.isfile(webdriver_config.path):
-                raise Exception("Load Error: No file was found at webdriver path '{webdriver_config.path}' \nPlease download webdriver and set the path in config.py.")
-            return webdriver_config
-        except AttributeError as e:
-            print(e)
-            sys.exit(1)
-        except Exception as e:
-            print(e)
-            sys.exit(1)
+    def _config_isvalid(self, config : Config, attributes : List[str]) -> bool:
+        check = [ hasattr(config, a) for a in attributes ]
+        return sum(check)==len(check)
     
     def get_driver_config(self, search_engine) -> Dict:
         driver_config = self.config.webdriver
@@ -77,9 +50,9 @@ class ImageScraper:
         return driver_config
 
    
-def download_image_urls(config : ImageScraper, image_urls : List[str], subfolder : str=None):
+def download_image_urls(config : ScraperConfig, image_urls : List[str], subfolder : str=None):
     """Creates an ImagesDownloader object and executes downloader given a list of urls."""
-    downloader = ImagesDownloader(config=config.image_config, subfolder=subfolder)
+    downloader = ImagesDownloader(config=config.config.image, subfolder=subfolder)
     downloader.download_queue(image_urls=image_urls)
 
 def configure(args):
@@ -98,9 +71,9 @@ def configure(args):
 
 def download(args) -> None:
     """Subparser controller: Downloads images given url(s)."""
-    config = ImageScraper()
+    config = ScraperConfig()
     if args.url:
-        ImagesDownloader(config=config.image_config).download_image(image_url=args.url)
+        ImagesDownloader(config=config.config.image).download_image(image_url=args.url)
     if args.pinterest_board:
         driver_config = config.get_driver_config("Pinterest")
         pinterest = PinterestSearch(driver_config=driver_config, url=args.pinterest_board)
@@ -112,6 +85,7 @@ def download(args) -> None:
         subfolder_name = args.name if args.name is not None else pinterest.get_details()["query"]
         download_image_urls(config=config, image_urls=image_urls, subfolder=subfolder_name)
     if args.from_file:
+        print(f"Downloading images from {args.from_file}...")
         image_urls = []
         subfolder_name = args.name if args.name is not None else os.path.splitext(os.path.basename(args.from_file))[0]
         with open(args.from_file) as file:
@@ -122,7 +96,7 @@ def download(args) -> None:
         
 def scrape(args) -> None:
     """Subparser controller: Retrieves image urls from the search engine and downloads them in a file."""
-    config = ImageScraper()
+    config = ScraperConfig()
     search_engines = []
     if args.search:
         if args.google:
@@ -182,7 +156,7 @@ def main():
     download_parser.set_defaults(func=download)
     
     config_parser = subparsers.add_parser("configure", aliases=["config"],
-                                          description="ImageScraper Configuration",
+                                          description="Image Scraper Configuration",
                                           help="configure settings of the scraper.")
     config_parser.add_argument('-cd','--chromedriver-path', help='enter the chromedriver path to quickly configure the package', type=file_path, required=False)
     config_parser.add_argument('-r', '--reset-defaults', help='resets the configuration settings (warning: the webdriver path will need to be reset', action='store_true', required=False)

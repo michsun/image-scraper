@@ -16,5 +16,6 @@ debug_files/*
 image_scraper/__pycache__/*
 
 # Files
+*image_urls.txt
 *.html
 TODO.md
