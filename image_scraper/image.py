@@ -106,7 +106,7 @@ class ImagesDownloader(Config):
         
         # TODO: Tabulate function in utils
         min_width = 12
-        width = max(max(map(len, unique)),12)
+        width = max(max(map(len, responses[unique])),12)
         print(f"\n {'STATUS':>{width}} | {'TOTAL IMAGES':<{width}}")
         print(" {}+{}".format('='*(width+1),'='*(width+1)))
         for k,v in results.items():

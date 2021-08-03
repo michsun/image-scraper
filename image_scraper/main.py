@@ -8,10 +8,11 @@ import validators
 
 from typing import Dict
 
-from config import Config, reset_defaults
+from config import Config, reset_defaults, update_config_json
 from image import ImagesDownloader
 from image_search import GoogleSearch, PinterestSearch
 from utils import timer
+from webdriver import WebDriver
 
 class ImageScraper:
     
@@ -59,7 +60,7 @@ class ImageScraper:
             webdriver_path = webdriver_config.path
             # TODO: Add additional check for the webdriver.
             if webdriver_path == "":
-                raise Exception("Load Error: The path for the webdriver has not been set. Please set your webdriver path in config.py")
+                raise Exception("Load Error: The path for the webdriver has not been set. \n\nPlease set your webdriver path in config.py or using 'python image_search config -cd <path_to_webdriver>'")
             if not os.path.isfile(webdriver_config.path):
                 raise Exception("Load Error: No file was found at webdriver path '{webdriver_config.path}' \nPlease download webdriver and set the path in config.py.")
             return webdriver_config
@@ -74,18 +75,26 @@ class ImageScraper:
         driver_config = self.config.webdriver
         driver_config.update(self.config.search[search_engine])
         return driver_config
-
-def configure(args, config: ImageScraper):
-    if args.reset_defaults:
-        reset_defaults()
-    if args.chromedriver_path:
-        pass
     
 def download_image_urls(config : ImageScraper, image_urls, subfolder=None):
     downloader = ImagesDownloader(config=config.image_config, subfolder=subfolder)
     downloader.download_queue(image_urls=image_urls)
 
-def download(args, config : ImageScraper) -> None:
+def configure(args):
+    if args.reset_defaults:
+        reset_defaults()
+        print("Successfully reset default configurations.")
+    if args.chromedriver_path:
+        test_config = {"browser": "Chrome", "path": args.chromedriver_path}
+        print("Attempting to create a selenium driver...")
+        WebDriver(driver_config=test_config)
+        print("Test driver created successfully.")
+        # If successful
+        update_config_json({"webdriver": {"path": args.chromedriver_path}})
+        print("\nChromedriver path updated. 'image_scraper' is now ready to use. Run 'python image_scraper -h' for help with commands.")
+
+def download(args) -> None:
+    config = ImageScraper()
     if args.url:
         ImagesDownloader(config=config.image_config).download_image(image_url=args.url)
     if args.pinterest_board:
@@ -107,7 +116,8 @@ def download(args, config : ImageScraper) -> None:
                     image_urls.append(line.strip())
         download_image_urls(config=config, image_urls=image_urls, subfolder=subfolder_name) 
         
-def search_and_scrape(args, config) -> None:
+def scrape(args) -> None:
+    config = ImageScraper()
     search_engines = []
     if args.search:
         if args.google:
@@ -132,7 +142,7 @@ def search_and_scrape(args, config) -> None:
                         file.write(f"{url}\n")
                 print(f"Image urls save in file '{file_name}'.")
 
-        # download_image_urls(config=config, image_urls=image_urls, subfolder=args.search)
+        download_image_urls(config=config, image_urls=image_urls, subfolder=args.search)
 
 def file_path(string):
     if os.path.isfile(string):
@@ -141,19 +151,19 @@ def file_path(string):
         raise argparse.ArgumentTypeError(f"{string} is not a valid file.")
 
         
-def parse(config):
+def main():
     """Process command line arguments and execute the given command."""    
     parser = argparse.ArgumentParser(description="Image Scraper command line utility.")
     subparsers = parser.add_subparsers(title="Commands")
     
-    search_parser = subparsers.add_parser("search", aliases=["srch"],
-                                          description="Searches for images and downloads them.",
+    search_parser = subparsers.add_parser("scrape", aliases=["scrp"],
+                                          description="Searches for images on a website and downloads them.",
                                           help="search and download images given a query")
     search_parser.add_argument('-g', '--google', help='search query on google', action='store_true',required=False)
     search_parser.add_argument('-p', '--pinterest', help='search query on pinterest', action='store_true', required=False)
     search_parser.add_argument('-e', '--export-urls', help='exports retrieved urls and saves as image_urls.txt', action='store_true', required=False)
     search_parser.add_argument('-s', '--search', help='query to search for on indicated search engine(s)', type=str, required=True)
-    search_parser.set_defaults(func=search_and_scrape)
+    search_parser.set_defaults(func=scrape)
 
     download_parser = subparsers.add_parser("download", aliases=["dl"],
                                            description="Downloads images given a url",
@@ -174,12 +184,7 @@ def parse(config):
     config_parser.set_defaults(func=configure)
     
     args = parser.parse_args()
-    args.func(args, config)
-
-
-def main():
-    config = ImageScraper()
-    parse(config)
+    args.func(args)
 
 if __name__ == "__main__":
     main()

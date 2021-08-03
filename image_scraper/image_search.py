@@ -10,14 +10,15 @@ import time
 import urllib
 from bs4 import BeautifulSoup
 
-from typing import Dict
+from typing import Dict, List
 
 from webdriver import WebDriver
 
 class ImageSearch:
     """Base class for image scrapers."""
     
-    def __init__(self, query, driver_config : Dict, verbose=False):
+    def __init__(self, name, query, driver_config : Dict, verbose=False):
+        self._name : str = name
         self._query : str = query
         self._verbose : bool = verbose
         self._driver_config : Dict = driver_config
@@ -41,12 +42,16 @@ class ImageSearch:
             "image_urls": {"successful": self._debug_success, "fail": self._debug_fail }
         }
         return deets
+    
+    def format_message(self, msg : str):
+        """Returns a formatted message string."""
+        return f"[{self._name.upper()}] {msg}"
 
 
 class GoogleSearch(ImageSearch):
     
     def __init__(self, driver_config : Dict, query, url=None, verbose=False):
-        super().__init__(query, driver_config, verbose)
+        super().__init__(name="Google", query=query, driver_config=driver_config, verbose=verbose)
         self._quote_via = urllib.parse.quote_plus
         self._name : str = "Google"
         self._url : str = self.generate_url() if url is None else url
@@ -62,9 +67,10 @@ class GoogleSearch(ImageSearch):
         image_elements = bs.find_all("div", {"class": "BUooTd"})
         return len(image_elements)
     
-    async def get_search_image_urls(self):
-        """Scrapes Google Search and returns a list of urls for the images."""
+    async def initialise_source_html(self) -> str:
+        """Initialises the class webdriver object and returns the source html."""
         super().initialise_webdriver(self._url)
+        print(self.format_message(f"Initialising {self._name} web page..."))
         
         await self._driver.scroll_to_bottom()
         # Clicks on "Show more results" to grab more images
@@ -72,19 +78,30 @@ class GoogleSearch(ImageSearch):
         await self._driver.click_and_get_elements(click_by="xpath", click_condition=xpath)
         await self._driver.scroll_to_bottom()
         
-        source_html = self._driver.get_page_source()
+        print(self.format_message(f"Initialising {self._name} web page complete."))
+        return self._driver.get_page_source()
+    
+    async def get_search_image_urls(self) -> List[str]:
+        """Scrapes Google Search and returns a list of urls for the images."""
+        print(self.format_message(f"Starting search for images of '{self._query}'..."))
+        super().initialise_webdriver(self._url)
+        
+        source_html = await self.initialise_source_html()
         n_detected = self.count_images(source_html)
-        print(f"> Number of images detected: {n_detected}")
+        
+        print(self.format_message(f"Number of google images detected = {n_detected}"))
         # Clicks on images and get full resolution images
         img_xpath = "//*[@id=\"Sva75c\"]/div/div/div[3]/div[2]/c-wiz/div/div[1]/div[1]/div[2]/div[1]/a/img"
         click_class = "BUooTd"
+        print(self.format_message(f"Clicking on images and attempting to retrieve urls..."))
         image_elements, exceptions = await self._driver.click_and_get_elements(click_by="class name",
                                                               click_condition=click_class,
                                                               save_xpath=img_xpath,
                                                               save_attr="src",
-                                                              save_condition_regex="(^https?://)(?!encrypted-tbn0.gstatic.com)")
+                                                              save_condition_regex="(^https?://)(?!encrypted-tbn0.gstatic.com)",
+                                                              description=self.format_message("Clicking images"))
 
-        image_urls = [ re.search('src="(.*?)"', element).group(1) for element in image_elements ] # Implement re.search() check before .group(1)
+        image_urls = [ re.search('src="(.*?)"', element).group(1) for element in image_elements if re.search('src="(.*?)"', element) is not None ]
         
         unique_err = list(set(exceptions))
         err_summary = { err_string : exceptions.count(err_string) for err_string in unique_err }
@@ -96,9 +113,9 @@ class GoogleSearch(ImageSearch):
         print(" {}+{}".format('='*(width+1),'='*(width+1)))
         for k,v in err_summary.items():
             print(f" {k:>{width}} | {v:<{width}}")
+        print("")
         
-        print(f"\n> Number of image urls retrieved: {len(image_urls)}")
-        
+        print(self.format_message(f"Image urls retrieval complete. Number of image urls successfully retrieved = {len(image_urls)}"))
         self._debug_success = len(image_urls)
         self._debug_fail = n_detected - self._debug_success
 
@@ -108,8 +125,7 @@ class GoogleSearch(ImageSearch):
 class PinterestSearch(ImageSearch):
     
     def __init__(self, driver_config : Dict, query=None, url=None, verbose=False):
-        super().__init__(query=query, driver_config=driver_config, verbose=verbose)
-        self._name : str= "Pinterest"
+        super().__init__(name="Pinterest", query=query, driver_config=driver_config, verbose=verbose)
         self._quote_via = urllib.parse.quote
         self._source_html = None
         self._url : str = self.generate_url() if url is None else url
@@ -121,15 +137,18 @@ class PinterestSearch(ImageSearch):
     
     async def initialise_source_html(self, scroll=True, expectation=None) -> str:
         super().initialise_webdriver(self._url)
+        print(self.format_message(f"Initialising {self._name} web page..."))
 
         if expectation is not None:
             await self._driver.scroll_to_element(expectation)
         elif scroll:
             await self._driver.scroll_to_bottom()
+        
+        print(self.format_message(f"Initialising {self._name} web page complete."))
         return self._driver.get_page_source()
     
     async def get_board_image_urls(self, board_name=None, save_source=False):
-        print("> Fetching pinterest board images...")
+        print(self.format_message(f"Fetching pinterest board image urls..."))
         expectation = ("xpath", "//section[@data-test-id='secondaryBoardGrid']")
         self._source_html = await self.initialise_source_html(expectation=expectation)
         
@@ -144,6 +163,7 @@ class PinterestSearch(ImageSearch):
     async def get_search_image_urls(self, board=False):
         """Scrapes Pinterest Search and returns a list of urls for the images."""
         if self._source_html is None:
+            print(self.format_message(f"Starting search for images of '{self._query}'..."))
             self._source_html = await self.initialise_source_html()
         
         bs = BeautifulSoup(self._source_html, "lxml")
@@ -151,8 +171,9 @@ class PinterestSearch(ImageSearch):
             bs = bs.find('div', {'class': "Collection"})
         image_elements = bs.find_all('img', {'src': re.compile("https://i.pinimg.com/236x/*")})
         urls = [ e.attrs['src'] for e in image_elements ]
-        print(f"> Number of image urls retrieved: {len(urls)}")
         image_urls = [ os.path.splitext(url)[0].replace('/236x/','/originals/').split('-')[0] + os.path.splitext(url)[1] for url in urls ]
+        
+        print(self.format_message(f"Image urls retrieval complete. Number of image urls successfully retrieved = {len(image_urls)}"))
         self._debug_success = len(image_urls)
         
         return image_urls

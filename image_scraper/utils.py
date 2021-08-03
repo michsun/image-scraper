@@ -1,8 +1,13 @@
 import time
 import functools
 
-def timer(function_without_args=None, *args, **kwargs):
+class Tabulate:
     
+    def __init__(self):
+        pass
+
+def timer(function_without_args=None, *args, **kwargs):
+    """Decorator function that times the functions."""
     # print(type(func_no_args), len(args), len(kwargs))
     precision = {
         's': 1,

@@ -12,7 +12,6 @@ def update_dictionary(prev: Dict, new: Dict):
     prev_updated = prev
     for k,v in new.items():
         if type(prev[k]) == dict and type(v) == dict:
-            print("Ran!")
             prev_updated[k] = update_dictionary(prev=prev[k], new=v)
         else:
             prev_updated[k] = v

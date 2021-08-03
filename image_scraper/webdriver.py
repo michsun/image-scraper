@@ -50,7 +50,6 @@ class WebDriver(Config):
     
     def _initialise_driver(self):
         """Initialises a selenium webdriver."""
-        print("> Initialising selenium webdriver...")
         if (self.browser == "Chrome"):
             chrome_options = Options()
             chrome_options.add_argument('--headless')
@@ -67,7 +66,7 @@ class WebDriver(Config):
                 print(e)
                 sys.exit()
         else:
-            raise Exception("Driver is not of Chrome type")
+            raise Exception("Driver is not Chrome")
     
     
     def get(self, url) -> None:
@@ -91,21 +90,21 @@ class WebDriver(Config):
         new_height = self.driver.execute_script("return document.body.scrollHeight")
         prev_height = 0
         # TODO: Implement verbose
-        print("> Scrolling to the bottom of the page...")
+        # print("> Scrolling to the bottom of the page...")
         while((new_height != prev_height) and (new_height < self.scroll_limit)):
             prev_height = new_height
             self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             await asyncio.sleep(self.load_sleep) # TODO: Check optimal sleep value
             new_height = self.driver.execute_script("return document.body.scrollHeight")
-            print("  Page height: ",new_height, sep='',end='\r',flush=True)
-        print("\n> Scroll complete")
+            # print("  Page height: ",new_height, sep='',end='\r',flush=True)
+        # print("\n> Scroll complete")
         
     async def scroll_to_element(self, expectation) -> None:
         """Scrolls down the page until an expected element has been detected."""
         from selenium.webdriver.support import expected_conditions as EC
         from selenium.common.exceptions import NoSuchElementException
         
-        print("> Scrolling down the page to an element...")
+        # print("> Scrolling down the page to an element...")
         detected = False
         count = 0
         while not detected:
@@ -128,9 +127,9 @@ class WebDriver(Config):
         print("Element found: ", end='')
         element = self.driver.find_element(expectation[0],expectation[1])
         print(element.get_attribute("outerHTML").replace(element.get_attribute("innerHTML"),''))
-        print("> Scroll complete")    
+        # print("> Scroll complete")    
     
-    async def click_and_get_elements(self, click_by, click_condition, save_xpath=None, save_attr=None, save_condition_regex=None) -> None:
+    async def click_and_get_elements(self, click_by, click_condition, save_xpath=None, save_attr=None, save_condition_regex=None, description=None) -> None:
         """Clicks on an identified element and gets elements as string if condition is given."""
         
         BY = ["id", "xpath", "link text", "partial link text", "name", "tag name", "class name", "css selector"]
@@ -143,11 +142,11 @@ class WebDriver(Config):
         click_elements = self.driver.find_elements(click_by, click_condition)
         save_elements = list()
         exceptions = list()
-        print("> Clicking on links...")
         
         # if len(click_elements) > TEST_LIMIT:
         #     click_elements = click_elements[:TEST_LIMIT]
-        for element in tqdm(click_elements):
+        disable_status = True if description is None else False
+        for element in tqdm(click_elements, desc=description, disable=disable_status):
             try:
                 if not element.is_displayed() or not element.is_enabled():
                     self.driver.execute_script("arguments[0].scrollIntoView();", element)
