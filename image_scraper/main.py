@@ -6,7 +6,7 @@ from re import search
 import sys
 import validators
 
-from typing import Dict
+from typing import Dict, List
 
 from config import Config, reset_defaults, update_config_json
 from image import ImagesDownloader
@@ -75,12 +75,15 @@ class ImageScraper:
         driver_config = self.config.webdriver
         driver_config.update(self.config.search[search_engine])
         return driver_config
-    
-def download_image_urls(config : ImageScraper, image_urls, subfolder=None):
+
+   
+def download_image_urls(config : ImageScraper, image_urls : List[str], subfolder : str=None):
+    """Creates an ImagesDownloader object and executes downloader given a list of urls."""
     downloader = ImagesDownloader(config=config.image_config, subfolder=subfolder)
     downloader.download_queue(image_urls=image_urls)
 
 def configure(args):
+    """Subparser controller: Initialises/configures the image scraper."""
     if args.reset_defaults:
         reset_defaults()
         print("Successfully reset default configurations.")
@@ -94,6 +97,7 @@ def configure(args):
         print("\nChromedriver path updated. 'image_scraper' is now ready to use. Run 'python image_scraper -h' for help with commands.")
 
 def download(args) -> None:
+    """Subparser controller: Downloads images given url(s)."""
     config = ImageScraper()
     if args.url:
         ImagesDownloader(config=config.image_config).download_image(image_url=args.url)
@@ -117,6 +121,7 @@ def download(args) -> None:
         download_image_urls(config=config, image_urls=image_urls, subfolder=subfolder_name) 
         
 def scrape(args) -> None:
+    """Subparser controller: Retrieves image urls from the search engine and downloads them in a file."""
     config = ImageScraper()
     search_engines = []
     if args.search:
@@ -145,6 +150,7 @@ def scrape(args) -> None:
         download_image_urls(config=config, image_urls=image_urls, subfolder=args.search)
 
 def file_path(string):
+    """Checks if the string is a valid file."""
     if os.path.isfile(string):
         return string
     else:
